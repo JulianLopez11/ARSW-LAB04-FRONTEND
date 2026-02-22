@@ -6,7 +6,6 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080' // Spr
 const IO_BASE  = import.meta.env.VITE_IO_BASE  ?? 'http://localhost:3001' // Node/Socket.IO
 
 export default function App() {
-  const [points, setPoints] = useState([])
   const [tech, setTech] = useState('stomp')
   const [author, setAuthor] = useState('juan')
   const [name, setName] = useState('plano-1')
@@ -17,12 +16,9 @@ export default function App() {
   const socketRef = useRef(null)
 
   useEffect(() => {
-    fetch(`${tech==='stomp'?API_BASE:IO_BASE}/api/v1/blueprints/${author}/${name}`)
-      .then(r=>{
-        const bp = r.data
-        setPoints(bp.points)
-        drawAll(bp)
-      })
+    fetch(`${tech==='stomp'?API_BASE:IO_BASE}/api/blueprints/${author}/${name}`)
+      .then(r=>r.json())
+      .then(drawAll)
   }, [tech, author, name])
 
   function drawAll(bp) {
