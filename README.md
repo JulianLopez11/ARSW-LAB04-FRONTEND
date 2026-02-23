@@ -132,46 +132,33 @@ En la interfaz: selecciona **Socket.IO** o **STOMP**, define `author` y `name`, 
   client.subscribe(`/topic/blueprints.${author}.${name}`, (msg) => { /* append points y repintar */ })
   ```
 
----
 
-## 🧪 Casos de prueba mínimos
-- **Estado inicial**: al seleccionar plano, el canvas carga puntos (`GET /api/blueprints/:author/:name`).  
-- **Dibujo local**: clic en canvas agrega puntos y redibuja.  
-- **RT multi-pestaña**: con 2 pestañas, los puntos se **replican** casi en tiempo real.  
-- **CRUD**: Create/Save/Delete funcionan y refrescan la lista y el **Total** del autor.
 
 ---
 
-## 📊 Entregables del equipo
-1. Código del Front integrado con **CRUD** y **RT** (Socket.IO o STOMP).  
-2. **Video corto** (≤ 90s) mostrando colaboración en vivo y operaciones CRUD.  
-3. **README del equipo**: setup, endpoints usados, decisiones (rooms/tópicos), y (opcional) breve comparativa Socket.IO vs STOMP.
+## Comparativa SOCKETIO vs STOMP
 
+Socket.IO y STOMP son tecnologías utilizadas para la comunicación en tiempo real, pero operan de manera diferente. Socket.IO es una biblioteca basada en `WebSockets` que permite comunicación bidireccional entre cliente y servidor de forma sencilla y eficiente y como lo he visto en materias anteriores y en esta es ideal para temas como chats o en este caso un interactivo para dibujar. El STOMP es un protocolo de mensajería que funciona sobre WebSockets  y está diseñado para integrarse con brokers de mensajería enfocándose en un modelo de publicar y consumir garantizando un enrutamiento estructurado de mensajes. 
+Se podria decir que socketIO es mas versatil y flexible mientras que los STOMPS son mas robustos y dependen de los protocolos de mensajeria 
 ---
 
-## 🧮 Rúbrica sugerida
-- **Funcionalidad (40%)**: RT estable (join/broadcast), aislamiento por plano, CRUD operativo.  
-- **Calidad técnica (30%)**: estructura limpia, manejo de errores, documentación clara.  
-- **Observabilidad/DX (15%)**: logs útiles (conexión, eventos), health checks básicos.  
-- **Análisis (15%)**: hallazgos (latencia/reconexión) y, si aplica, pros/cons Socket.IO vs STOMP.
-
----
-
-## 🩺 Troubleshooting
-- **Pantalla en blanco (Front)**: revisa consola; confirma `@vitejs/plugin-react` instalado y que `AppP4.jsx` esté en `src/`.  
-- **No hay broadcast**: ambas pestañas deben hacer `join-room` al **mismo** plano (Socket.IO) o suscribirse al **mismo tópico** (STOMP).  
-- **CORS**: en dev permite `http://localhost:5173`; en prod, **restringe orígenes**.  
-- **Socket.IO no conecta**: fuerza transporte WebSocket `{ transports: ['websocket'] }`.  
-- **STOMP no recibe**: verifica `brokerURL`/`webSocketFactory` y los prefijos `/app` y `/topic` en Spring.
-
----
 
 ## Evidencia Stomp
+
 ![alt text](docs/img/primerpestana.png)
 ---
 ![alt text](docs/img/segundapestana.png)
 ---
 
+## Evidencia Socket IO
 
+![alt text](docs/img/pruebaunosocket.png)
+---
+
+![alt text](docs/img/pruebadossocket.png)
 ## 📄 Licencia
 MIT (o la definida por el curso/equipo).
+
+## Autor
+
+* **Julian Camilo Lopez Barrero** - [JulianLopez11](https://github.com/JulianLopez11)
