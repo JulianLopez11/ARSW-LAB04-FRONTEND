@@ -6,84 +6,80 @@ import ActionBar from './components/ActionBar'
 import AuthorPanel from './components/AuthorPanel'
 import BlueprintCanvas from './components/BlueprintCanvas'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
-const IO_BASE  = import.meta.env.VITE_IO_BASE  ?? 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080' // Spring
+const IO_BASE  = import.meta.env.VITE_IO_BASE  ?? 'http://localhost:3001' // Node/Socket.IO
+
 
 export default function App() {
-  const [tech, setTech] = useState('stomp')
-  const [author, setAuthor] = useState('juan')
-  const [blueprints, setBlueprints] = useState([])
-  const [selectedBP, setSelectedBP] = useState(null)
-  const [points, setPoints] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [tech, setTech] = useState('stomp')       
+  const [author, setAuthor] = useState('juan')    // Autor 
+  const [blueprints, setBlueprints] = useState([]) // Lista de planos del autor
+  const [selectedBP, setSelectedBP] = useState(null) 
+  const [points, setPoints] = useState([])        
+  const [loading, setLoading] = useState(false)    
 
-  const stompRef = useRef(null)
-  const socketRef = useRef(null)
-  const unsubFn = useRef(null)
+  const stompRef = useRef(null) 
+  const socketRef = useRef(null) 
+  const unsubFn = useRef(null)  
 
-  // Planos asociados a autor
   const refreshBlueprints = async () => {
     setLoading(true)
-    setError(null)
+    const base = tech === 'stomp' ? API_BASE : IO_BASE
     try {
-      const res = await fetch(`${tech === 'stomp' ? API_BASE : IO_BASE}/api/v1/blueprints/${author}`)
+      const res = await fetch(`${base}/api/v1/blueprints/${author}`)
       const json = await res.json()
-      if (res.ok && json.data) setBlueprints(json.data)
-      else setBlueprints([])
-    } catch (err) {
-      setError("Error de conexión")
-    } finally {
-      setLoading(false)
-    }
+      setBlueprints(json.data || [])
+    } catch (e) { setBlueprints([]) }
+    finally { setLoading(false) }
   }
 
-  useEffect(() => {
-    refreshBlueprints()
-  }, [author, tech])
+  // Recarga los planos cada vez que cambia el autor o la tecnología RT.
+  useEffect(() => { refreshBlueprints() }, [author, tech])
 
   useEffect(() => {
-    if (typeof unsubFn.current === 'function') unsubFn.current()
-    unsubFn.current = null
-
-    if (stompRef.current) {
-      stompRef.current.deactivate()
-      stompRef.current = null
-    }
+    if (unsubFn.current) unsubFn.current()
+    if (stompRef.current) stompRef.current.deactivate()
+    if (socketRef.current) socketRef.current.disconnect()
 
     setPoints([])
     if (!selectedBP) return
-    //fetchhh
-    fetch(`${API_BASE}/api/v1/blueprints/${author}/${selectedBP}`)
+
+    const base = tech === 'stomp' ? API_BASE : IO_BASE
+    
+    fetch(`${base}/api/v1/blueprints/${author}/${selectedBP}`)
       .then(r => r.json())
       .then(json => {
-        if (json?.data?.points) setPoints(json.data.points)
+        const data = json.data || json;
+        setPoints(data.points || [])
       })
 
     if (tech === 'stomp') {
       const client = createStompClient(API_BASE)
       stompRef.current = client
-      
       client.onConnect = () => {
-        console.log("Conectado a STOMP");
-        const subscription = subscribeBlueprint(client, author, selectedBP, (updatedBp) => {
-          console.log("Actualización recibida:", updatedBp);
-          if (updatedBp && updatedBp.points) {
-            setPoints([...updatedBp.points]); 
-          }
+        const sub = subscribeBlueprint(client, author, selectedBP, (d) => {
+          if (d?.points) setPoints(d.points)
         })
-        unsubFn.current = () => subscription.unsubscribe()
+        unsubFn.current = () => sub.unsubscribe()
       }
       client.activate()
-    }
-
-    return () => {
-      if (typeof unsubFn.current === 'function') unsubFn.current()
-      stompRef.current?.deactivate()
+    } else {
+      const socket = createSocket(IO_BASE)
+      socketRef.current = socket
+      socket.connect()
+      socket.emit('join-room', `${author}.${selectedBP}`)
+      socket.on('blueprint-update', (d) => {
+        if (d?.points) setPoints(prev => [...prev, ...d.points])
+      })
+      unsubFn.current = () => socket.disconnect()
     }
   }, [tech, author, selectedBP])
 
-  //Envío de dibujos al servidor
+  /**
+   * Dibuja los puntos
+   * @param {number} x - Coordenada X relativa al canvas.
+   * @param {number} y - Coordenada Y relativa al canvas.
+   */
   const handleDraw = (x, y) => {
     if (!selectedBP) return
     const point = { x, y }
@@ -91,15 +87,24 @@ export default function App() {
 
     if (tech === 'stomp' && stompRef.current?.connected) {
       stompRef.current.publish({
-        destination: '/app/draw', 
+        destination: '/app/draw',
         body: JSON.stringify({ author, name: selectedBP, point })
+      })
+    } else if (tech === 'socketio' && socketRef.current?.connected) {
+      socketRef.current.emit('draw-event', {
+        room: `${author}.${selectedBP}`, author, name: selectedBP, point
       })
     }
   }
 
+  /**
+   * Crea un nuevo plano vacío para el autor que este ahi
+   * @param {string} name - Nombre del nuevo plano.
+   */
   const handleCreate = async (name) => {
+    const base = tech === 'stomp' ? API_BASE : IO_BASE
     try {
-      const res = await fetch(`${API_BASE}/api/v1/blueprints`, {
+      const res = await fetch(`${base}/api/v1/blueprints`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author, name, points: [] })
@@ -108,99 +113,76 @@ export default function App() {
         await refreshBlueprints()
         setSelectedBP(name)
       } else {
-        const err = await res.json()
-        alert(err.message || "No se pudo crear")
+        alert("Error al crear el plano")
       }
     } catch (e) { alert("Error de red") }
   }
 
+  //Elimina plano seleccionado
   const handleDelete = async () => {
-    const res = await fetch(`${API_BASE}/api/v1/blueprints/${author}/${selectedBP}`, {
-      method: 'DELETE'
-    })
-    if (res.ok) {
-      setSelectedBP(null)
-      refreshBlueprints()
-    }
+    if (!selectedBP) return
+    const base = tech === 'stomp' ? API_BASE : IO_BASE
+    try {
+      const res = await fetch(`${base}/api/v1/blueprints/${author}/${selectedBP}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setSelectedBP(null)
+        refreshBlueprints()
+      }
+    } catch (e) { alert("Error al eliminar") }
   }
-
   return (
-    <div style={{
-      padding: 24,
-      maxWidth: 1000,
-      margin: '40px auto',
-      fontFamily: 'Segoe UI, Tahoma, sans-serif',
-      backgroundColor: '#f9f9f9',
-      borderRadius: 12,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-    }}>
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '2px solid #e0e0e0',
-        paddingBottom: 16,
-        marginBottom: 20
-      }}>
-        <h2 style={{ margin: 0, color: '#333' }}>BluePrints RT</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
+    <div style={{ padding: 25, maxWidth: 1100, margin: '0 auto', fontFamily: 'Arial, sans-serif', backgroundColor: '#f9f9f9' }}>
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 30,
+          padding: '15px 20px',
+          backgroundColor: '#ffffff',
+          borderRadius: 12,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#333' }}>
+          BluePrints RT
+          <span style={{ fontWeight: 'normal', fontSize: '1rem', marginLeft: 10, color: '#666' }}>
+            - Mode: {tech.toUpperCase()}
+          </span>
+        </h2>
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <select
             value={tech}
-            onChange={e => setTech(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: '1px solid #ccc',
-              backgroundColor: '#fff',
-              fontSize: 14,
-              cursor: 'pointer',
-              transition: '0.2s all'
-            }}
+            onChange={e => { setTech(e.target.value); setSelectedBP(null) }}
+            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ccc', fontSize: '0.9rem' }}
           >
             <option value="stomp">STOMP (Spring)</option>
-            <option value="socketio">Socket.IO</option>
+            <option value="socketio">Socket.IO (Node)</option>
           </select>
 
           <input
             value={author}
-            onChange={e => { setAuthor(e.target.value); setSelectedBP(null); }}
+            onChange={e => { setAuthor(e.target.value); setSelectedBP(null) }}
             placeholder="Autor"
-            style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: '1px solid #ccc',
-              fontSize: 14,
-              width: 150,
-              transition: '0.2s all'
-            }}
+            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ccc', fontSize: '0.9rem', width: 150 }}
           />
         </div>
       </header>
 
-      <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
-        <aside style={{ width: 220 }}>
-          <AuthorPanel
-            blueprints={blueprints}
-            loading={loading}
-            error={error}
-            selected={selectedBP}
-            onSelect={setSelectedBP}
-          />
-        </aside>
-
-        <main style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 20 }}>
+        <AuthorPanel blueprints={blueprints} loading={loading} selected={selectedBP} onSelect={setSelectedBP} />
+        <div style={{ flex: 1 }}>
           <ActionBar
             selected={selectedBP}
+            onReload={refreshBlueprints}
             onCreate={handleCreate}
             onDelete={handleDelete}
-            onReload={refreshBlueprints}
           />
-          <BlueprintCanvas
-            points={points}
-            onDraw={handleDraw}
-            disabled={!selectedBP}
-          />
-        </main>
+          <BlueprintCanvas points={points} onDraw={handleDraw} disabled={!selectedBP} />
+        </div>
       </div>
     </div>
   )
