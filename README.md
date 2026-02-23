@@ -166,12 +166,12 @@ En la interfaz: selecciona **Socket.IO** o **STOMP**, define `author` y `name`, 
 
 ---
 
-## 🔐 Seguridad (mínimos)
-- Validación de payloads (p. ej., zod/joi).  
-- Restricción de orígenes en prod.  
-- Opcional: **JWT** + autorización por plano/sala.
-
+## Evidencia Stomp
+![alt text](docs/img/primerpestana.png)
 ---
+![alt text](docs/img/segundapestana.png)
+---
+
 
 ## 📄 Licencia
 MIT (o la definida por el curso/equipo).
