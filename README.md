@@ -138,8 +138,9 @@ En la interfaz: selecciona **Socket.IO** o **STOMP**, define `author` y `name`, 
 
 ## Comparativa SOCKETIO vs STOMP
 
-Socket.IO y STOMP son tecnologías utilizadas para la comunicación en tiempo real, pero operan de manera diferente. Socket.IO es una biblioteca basada en `WebSockets` que permite comunicación bidireccional entre cliente y servidor de forma sencilla y eficiente y como lo he visto en materias anteriores y en esta es ideal para temas como chats o en este caso un interactivo para dibujar. El STOMP es un protocolo de mensajería que funciona sobre WebSockets  y está diseñado para integrarse con brokers de mensajería enfocándose en un modelo de publicar y consumir garantizando un enrutamiento estructurado de mensajes. 
-Se podria decir que socketIO es mas versatil y flexible mientras que los STOMPS son mas robustos y dependen de los protocolos de mensajeria 
+  - Socket.IO y STOMP son tecnologías utilizadas para la comunicación en tiempo real, pero operan de manera diferente. Socket.IO es una biblioteca basada en `WebSockets` que permite comunicación bidireccional entre cliente y servidor de forma sencilla y eficiente y como lo he visto en materias anteriores y en esta es ideal para temas como chats o en este caso un interactivo para dibujar. El STOMP es un protocolo de mensajería que funciona sobre WebSockets  y está diseñado para integrarse con brokers de mensajería enfocándose en un modelo de publicar y consumir garantizando un enrutamiento estructurado de mensajes. 
+  Se podria decir que socketIO es mas versatil y flexible mientras que los STOMPS son mas robustos y dependen de los protocolos de mensajeria 
+
 ---
 
 
