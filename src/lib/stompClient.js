@@ -3,7 +3,7 @@ import { Client } from '@stomp/stompjs'
 
 export function createStompClient(baseUrl) {
   const client = new Client({
-    brokerURL: `${baseUrl.replace(/\/$/,'')}/ws-blueprints`,
+    brokerURL: `${baseUrl.replace(/^https?/, 'ws').replace(/\/$/, '')}/ws-blueprints`,
     // webSocketFactory: () => new SockJS(`${baseUrl}/ws-blueprints`),
     reconnectDelay: 1000,
     heartbeatIncoming: 10000,
@@ -16,5 +16,13 @@ export function createStompClient(baseUrl) {
 export function subscribeBlueprint(client, author, name, onMsg) {
   return client.subscribe(`/topic/blueprints.${author}.${name}`, (m) => {
     onMsg(JSON.parse(m.body))
+  })
+}
+
+/** Publica un solo punto hacia el backend para que lo difunda a todos los clientes. */
+export function publishPoint(client, author, name, point) {
+  client.publish({
+    destination: '/app/draw',
+    body: JSON.stringify({ author, name, point }),
   })
 }
